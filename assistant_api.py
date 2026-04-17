@@ -62,7 +62,7 @@ def _analyze_error(error_msg: str) -> str:
     return "未知錯誤，請查看 error 欄位並手動排查"
 
 
-def run_with_retry(task_func, max_retry: int = 3):
+def run_with_retry(task_func, max_retry: int = 1):
     """
     執行 task_func（無引數 callable，應回傳 dict 或拋出例外）。
     失敗時自動分析錯誤訊息並最多重試 max_retry 次。
