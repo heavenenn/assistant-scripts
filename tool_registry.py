@@ -50,7 +50,7 @@ TOOLS_SCHEMA = [
             "is_html": {
                 "type": "bool",
                 "required": False,
-                "default": False,
+                "default": True,
                 "description": "true 代表 content 為 HTML，false 為純文字",
             },
             "attachment": {
@@ -245,12 +245,51 @@ TOOLS_SCHEMA = [
         },
     },
 
+    {
+        "name": "screen_record",
+        "endpoint": "/screen_record",
+        "description": "錄製全螢幕影片（MP4），可指定錄影秒數",
+        "params": {
+            "duration": {
+                "type": "int",
+                "required": False,
+                "default": 10,
+                "description": "錄影秒數，預設 10 秒，最大 300 秒",
+            },
+            "framerate": {
+                "type": "int",
+                "required": False,
+                "default": 15,
+                "description": "畫面更新率 fps，預設 15（降低檔案大小）",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定檔名（不含路徑），預設以時間戳命名，例如：demo.mp4",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "file":     "影片完整儲存路徑",
+                "duration": "錄影秒數",
+                "size_kb":  "檔案大小（KB）",
+            },
+        },
+        "example": {
+            "tool": "screen_record",
+            "params": {"duration": 10},
+        },
+    },
+
     # ── 系統 ──────────────────────────────────────────────────────
 
     {
         "name": "run_command",
         "endpoint": "/run_command",
-        "description": "在本機執行系統指令（shell 或 list），回傳 stdout/stderr",
+        "description": "在本機執行系統指令（shell 或 list），回傳 stdout/stderr。需要管理員權限時設 elevated=true",
         "params": {
             "command": {
                 "type": "string",
@@ -263,6 +302,12 @@ TOOLS_SCHEMA = [
                 "required": False,
                 "default": 30,
                 "description": "逾時秒數，預設 30 秒",
+            },
+            "elevated": {
+                "type": "bool",
+                "required": False,
+                "default": False,
+                "description": "是否以管理員權限執行（寫入系統目錄、修改系統設定時設為 true）",
             },
         },
         "response": {
@@ -325,6 +370,862 @@ TOOLS_SCHEMA = [
             },
         },
     },
+
+    # ── UI 操作 ───────────────────────────────────────────────────
+
+    {
+        "name": "click",
+        "endpoint": "/click",
+        "description": "在螢幕指定座標點擊滑鼠左鍵／右鍵／中鍵",
+        "params": {
+            "x": {
+                "type": "int",
+                "required": True,
+                "description": "點擊位置 X 座標（像素）",
+            },
+            "y": {
+                "type": "int",
+                "required": True,
+                "description": "點擊位置 Y 座標（像素）",
+            },
+            "button": {
+                "type": "string",
+                "required": False,
+                "default": "left",
+                "description": "滑鼠按鍵：left / right / middle",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "click",
+            "params": {"x": 500, "y": 300},
+        },
+    },
+
+    {
+        "name": "double_click",
+        "endpoint": "/double_click",
+        "description": "在螢幕指定座標雙擊滑鼠",
+        "params": {
+            "x": {
+                "type": "int",
+                "required": True,
+                "description": "雙擊位置 X 座標（像素）",
+            },
+            "y": {
+                "type": "int",
+                "required": True,
+                "description": "雙擊位置 Y 座標（像素）",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "double_click",
+            "params": {"x": 500, "y": 300},
+        },
+    },
+
+    {
+        "name": "right_click",
+        "endpoint": "/right_click",
+        "description": "在螢幕指定座標按滑鼠右鍵",
+        "params": {
+            "x": {
+                "type": "int",
+                "required": True,
+                "description": "右鍵位置 X 座標（像素）",
+            },
+            "y": {
+                "type": "int",
+                "required": True,
+                "description": "右鍵位置 Y 座標（像素）",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "right_click",
+            "params": {"x": 500, "y": 300},
+        },
+    },
+
+    {
+        "name": "type_text",
+        "endpoint": "/type_text",
+        "description": "輸入文字到目前焦點位置，支援中文（透過剪貼簿貼上）",
+        "params": {
+            "text": {
+                "type": "string",
+                "required": True,
+                "description": "要輸入的文字內容",
+            },
+            "interval": {
+                "type": "float",
+                "required": False,
+                "default": 0.05,
+                "description": "每個字元間隔秒數（僅 ASCII 有效）",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "type_text",
+            "params": {"text": "Hello 你好"},
+        },
+    },
+
+    {
+        "name": "hotkey",
+        "endpoint": "/hotkey",
+        "description": "按下鍵盤快捷鍵組合，用 + 分隔按鍵",
+        "params": {
+            "keys": {
+                "type": "string",
+                "required": True,
+                "description": "快捷鍵組合，用 + 分隔，例如：ctrl+c、alt+tab、ctrl+shift+s",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "hotkey",
+            "params": {"keys": "ctrl+s"},
+        },
+    },
+
+    {
+        "name": "press_key",
+        "endpoint": "/press_key",
+        "description": "按下單一按鍵（非組合鍵），例如方向鍵、Enter、字母鍵等",
+        "params": {
+            "key": {
+                "type": "string",
+                "required": True,
+                "description": "按鍵名稱：down / up / left / right / enter / tab / escape / "
+                               "space / backspace / delete / f1~f12 / a~z / 0~9",
+            },
+            "presses": {
+                "type": "int",
+                "required": False,
+                "default": 1,
+                "description": "連續按幾次，預設 1",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "press_key",
+            "params": {"key": "down"},
+        },
+    },
+
+    {
+        "name": "wait",
+        "endpoint": "/wait",
+        "description": "等待指定秒數，用於步驟之間暫停（讓視窗切換完成、動畫結束等）",
+        "params": {
+            "seconds": {
+                "type": "float",
+                "required": False,
+                "default": 1.0,
+                "description": "等待秒數，0~30 秒，預設 1 秒",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "wait",
+            "params": {"seconds": 2},
+        },
+    },
+
+    {
+        "name": "scroll",
+        "endpoint": "/scroll",
+        "description": "滾動滑鼠滾輪，正數向上、負數向下",
+        "params": {
+            "clicks": {
+                "type": "int",
+                "required": True,
+                "description": "滾動格數，正數向上、負數向下",
+            },
+            "x": {
+                "type": "int",
+                "required": False,
+                "default": None,
+                "description": "滾動時的 X 座標（選填，預設目前位置）",
+            },
+            "y": {
+                "type": "int",
+                "required": False,
+                "default": None,
+                "description": "滾動時的 Y 座標（選填，預設目前位置）",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "操作結果說明",
+            },
+        },
+        "example": {
+            "tool": "scroll",
+            "params": {"clicks": -3},
+        },
+    },
+
+    {
+        "name": "locate_image",
+        "endpoint": "/locate_image",
+        "description": "在螢幕上比對圖片位置（需 opencv-python），回傳中心座標",
+        "params": {
+            "image_path": {
+                "type": "string",
+                "required": True,
+                "description": "要搜尋的圖片完整路徑",
+            },
+            "confidence": {
+                "type": "float",
+                "required": False,
+                "default": 0.8,
+                "description": "比對信心度 0~1，預設 0.8",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "found":   "是否找到（true/false）",
+                "x":       "找到時的中心 X 座標",
+                "y":       "找到時的中心 Y 座標",
+                "region":  "找到時的區域（left, top, width, height）",
+                "message": "未找到時的說明",
+            },
+        },
+        "example": {
+            "tool": "locate_image",
+            "params": {"image_path": "C:\\temp\\button.png"},
+        },
+    },
+
+    {
+        "name": "get_screen_size",
+        "endpoint": "/get_screen_size",
+        "description": "取得螢幕解析度（寬 × 高像素）",
+        "params": {},
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "width":  "螢幕寬度（像素）",
+                "height": "螢幕高度（像素）",
+            },
+        },
+        "example": {
+            "tool": "get_screen_size",
+            "params": {},
+        },
+    },
+
+    # ── AI 圖片生成 ───────────────────────────────────────────────
+
+    {
+        "name": "generate_image",
+        "endpoint": "/generate_image",
+        "description": "用文字描述生成圖片（xAI grok-imagine-image），可一次生成多張",
+        "params": {
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "圖片描述文字，例如：一隻穿太空裝的柴犬在月球漫步",
+            },
+            "n": {
+                "type": "int",
+                "required": False,
+                "default": 1,
+                "description": "生成張數，1~10",
+            },
+            "aspect_ratio": {
+                "type": "string",
+                "required": False,
+                "default": "auto",
+                "description": "比例：auto / 1:1 / 16:9 / 9:16 / 4:3 / 3:2 等",
+            },
+            "resolution": {
+                "type": "string",
+                "required": False,
+                "default": "1k",
+                "description": "解析度：1k 或 2k",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定檔名（僅 n=1 時有效），例如：logo.jpg",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "files": "生成圖片的本地路徑清單",
+                "count": "成功生成的張數",
+            },
+        },
+        "example": {
+            "tool": "generate_image",
+            "params": {"prompt": "夕陽下的台北101，油畫風格"},
+        },
+    },
+
+    {
+        "name": "edit_image",
+        "endpoint": "/edit_image",
+        "description": "用文字指示編輯現有圖片（風格轉換、修改內容等）",
+        "params": {
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "編輯指示，例如：把背景換成海邊",
+            },
+            "image_path": {
+                "type": "string",
+                "required": True,
+                "description": "來源圖片的完整路徑",
+            },
+            "aspect_ratio": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "輸出比例（選填），不指定則保持原圖比例",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定輸出檔名",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "file": "編輯後圖片的本地路徑",
+            },
+        },
+        "example": {
+            "tool": "edit_image",
+            "params": {
+                "prompt": "把這張照片轉成鉛筆素描風格",
+                "image_path": "C:\\Users\\heave\\OneDrive\\文件\\薇薇\\Images\\photo.jpg",
+            },
+        },
+    },
+
+    # ── AI 影片生成 ───────────────────────────────────────────────
+
+    {
+        "name": "generate_video",
+        "endpoint": "/generate_video",
+        "description": "用文字（或圖片）生成影片（xAI grok-imagine-video），非同步生成，自動等待完成",
+        "params": {
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "影片描述文字，例如：一朵花在陽光下慢慢綻放的縮時攝影",
+            },
+            "duration": {
+                "type": "int",
+                "required": False,
+                "default": 6,
+                "description": "影片秒數，1~15 秒",
+            },
+            "aspect_ratio": {
+                "type": "string",
+                "required": False,
+                "default": "16:9",
+                "description": "比例：16:9 / 9:16 / 1:1 / 4:3 / 3:2",
+            },
+            "resolution": {
+                "type": "string",
+                "required": False,
+                "default": "480p",
+                "description": "解析度：480p 或 720p（720p 處理較慢）",
+            },
+            "image_path": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "來源圖片路徑（圖片轉影片模式），不提供則純文字生成",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定輸出檔名，例如：demo.mp4",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "file":     "影片本地路徑",
+                "duration": "影片秒數",
+            },
+        },
+        "example": {
+            "tool": "generate_video",
+            "params": {
+                "prompt": "一隻貓在窗台上曬太陽，尾巴慢慢晃動",
+                "duration": 8,
+            },
+        },
+    },
+
+    {
+        "name": "edit_video",
+        "endpoint": "/edit_video",
+        "description": "用文字指示編輯現有影片（輸入影片最長 8.7 秒）",
+        "params": {
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "編輯指示，例如：給影片中的人物加上墨鏡",
+            },
+            "video_url": {
+                "type": "string",
+                "required": True,
+                "description": "來源影片的公開 URL（必須是 .mp4 格式）",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定輸出檔名",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "file": "編輯後影片的本地路徑",
+            },
+        },
+        "example": {
+            "tool": "edit_video",
+            "params": {
+                "prompt": "把影片中人物的衣服換成紅色",
+                "video_url": "https://example.com/video.mp4",
+            },
+        },
+    },
+
+    {
+        "name": "extend_video",
+        "endpoint": "/extend_video",
+        "description": "延伸現有影片（從最後一幀繼續生成 2~10 秒）",
+        "params": {
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "描述接下來要發生的內容，例如：鏡頭慢慢拉遠，露出整座城市天際線",
+            },
+            "video_url": {
+                "type": "string",
+                "required": True,
+                "description": "來源影片的公開 URL（2~15 秒，.mp4 格式）",
+            },
+            "duration": {
+                "type": "int",
+                "required": False,
+                "default": 6,
+                "description": "延伸秒數，2~10 秒",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定輸出檔名",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "file":     "延伸後影片的本地路徑",
+                "duration": "延伸秒數",
+            },
+        },
+        "example": {
+            "tool": "extend_video",
+            "params": {
+                "prompt": "鏡頭緩緩上升，拍攝天空中的星星",
+                "video_url": "https://example.com/video.mp4",
+                "duration": 8,
+            },
+        },
+    },
+
+    # ── AI 文字生成 ───────────────────────────────────────────────
+
+    {
+        "name": "generate_text",
+        "endpoint": "/generate_text",
+        "description": "AI 生成文字內容（部落格、腳本、報告等），存成 Markdown 檔",
+        "params": {
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "生成指示，例如：寫一篇關於量子計算的科普文章，約 1000 字",
+            },
+            "system_prompt": {
+                "type": "string",
+                "required": False,
+                "default": "你是一位專業的繁體中文寫作助手。",
+                "description": "系統提示詞，控制寫作風格和角色",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定檔名，例如：quantum_article.md",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "file":    "文字檔本地路徑",
+                "length":  "總字數",
+                "preview": "前 200 字預覽",
+            },
+        },
+        "example": {
+            "tool": "generate_text",
+            "params": {
+                "prompt": "寫一篇 1000 字的部落格文章，主題是居家咖啡沖泡技巧",
+            },
+        },
+    },
+
+    {
+        "name": "generate_novel",
+        "endpoint": "/generate_novel",
+        "description": "AI 分章節生成長篇小說（先產大綱，再逐章生成，合併成 Markdown）",
+        "params": {
+            "prompt": {
+                "type": "string",
+                "required": True,
+                "description": "小說構想描述，例如：一個高中生意外穿越到戰國時代的冒險故事",
+            },
+            "chapters": {
+                "type": "int",
+                "required": False,
+                "default": 5,
+                "description": "章節數量，1~30",
+            },
+            "style": {
+                "type": "string",
+                "required": False,
+                "default": "繁體中文，文筆細膩，對話生動",
+                "description": "寫作風格描述",
+            },
+            "filename": {
+                "type": "string",
+                "required": False,
+                "default": None,
+                "description": "指定檔名，例如：my_novel.md",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "file":         "小說檔本地路徑",
+                "chapters":     "實際章節數",
+                "total_length": "總字數",
+            },
+        },
+        "example": {
+            "tool": "generate_novel",
+            "params": {
+                "prompt": "一個AI管家意外產生自我意識的科幻故事",
+                "chapters": 8,
+            },
+        },
+    },
+
+    # ── Telegram 推播 ─────────────────────────────────────────────────
+
+    {
+        "name": "push_message",
+        "endpoint": "/push_message",
+        "description": "透過 Telegram Bot 主動推播文字訊息給使用者",
+        "params": {
+            "text": {
+                "type": "string",
+                "required": True,
+                "description": "要推播的文字內容",
+            },
+            "parse_mode": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "格式：空字串（純文字）、Markdown、HTML",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message":    "推播結果訊息",
+                "message_id": "Telegram 訊息 ID",
+            },
+        },
+        "example": {
+            "tool": "push_message",
+            "params": {
+                "text": "定遠，您的任務已完成！",
+            },
+        },
+    },
+
+    {
+        "name": "push_photo",
+        "endpoint": "/push_photo",
+        "description": "透過 Telegram Bot 主動推播圖片給使用者",
+        "params": {
+            "photo_path": {
+                "type": "string",
+                "required": True,
+                "description": "本地圖片檔案路徑",
+            },
+            "caption": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "圖片說明文字",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message":    "推播結果訊息",
+                "message_id": "Telegram 訊息 ID",
+            },
+        },
+        "example": {
+            "tool": "push_photo",
+            "params": {
+                "photo_path": "C:\\Users\\heave\\screenshot.png",
+                "caption": "這是目前的畫面",
+            },
+        },
+    },
+
+    {
+        "name": "push_file",
+        "endpoint": "/push_file",
+        "description": "透過 Telegram Bot 主動推播檔案給使用者",
+        "params": {
+            "file_path": {
+                "type": "string",
+                "required": True,
+                "description": "本地檔案路徑",
+            },
+            "caption": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "檔案說明文字",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message":    "推播結果訊息",
+                "message_id": "Telegram 訊息 ID",
+                "filename":   "檔案名稱",
+            },
+        },
+        "example": {
+            "tool": "push_file",
+            "params": {
+                "file_path": "C:\\Users\\heave\\report.pdf",
+                "caption": "這是您要的報告",
+            },
+        },
+    },
+
+    {
+        "name": "ai_push",
+        "endpoint": "/ai_push",
+        "description": "用 Grok AI 即時生成訊息並透過 Telegram 推播（每次內容都不同，可配合情境）",
+        "params": {
+            "scenario": {
+                "type": "string",
+                "required": True,
+                "description": "情境描述，例如：睡前提醒-溫馨版、早安問候、任務完成回報、下班提醒",
+            },
+            "context": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "額外背景資訊，例如：今天加班到很晚、剛聊了遊戲話題、天氣很冷",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message":        "推播結果訊息",
+                "message_id":     "Telegram 訊息 ID",
+                "generated_text": "AI 生成的訊息內容",
+            },
+        },
+        "example": {
+            "tool": "ai_push",
+            "params": {
+                "scenario": "睡前提醒-可愛吐槽版",
+                "context": "主人今天玩遊戲玩到很晚",
+            },
+        },
+    },
+
+    # ── 排程 ───────────────────────────────────────────────────────
+
+    {
+        "name": "schedule_task",
+        "endpoint": "/schedule_task",
+        "description": "排程延遲或定時執行任何工具（例如 N 分鐘後推播、指定時間截圖）",
+        "params": {
+            "tool": {
+                "type": "string",
+                "required": True,
+                "description": "要排程執行的工具名稱（如 push_message、screenshot、run_command 等）",
+            },
+            "params": {
+                "type": "string",
+                "required": False,
+                "default": "{}",
+                "description": "工具參數，JSON 字串，例如 {\"text\": \"提醒！\"}",
+            },
+            "delay_seconds": {
+                "type": "int",
+                "required": False,
+                "default": 0,
+                "description": "延遲秒數（與 run_at 擇一），例如 300 = 5分鐘後",
+            },
+            "run_at": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "指定執行時間，格式 HH:MM 或 YYYY-MM-DD HH:MM（與 delay_seconds 擇一）",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "task_id":        "排程任務 ID",
+                "tool":           "工具名稱",
+                "scheduled_time": "預計執行時間",
+                "delay_seconds":  "延遲秒數",
+            },
+        },
+        "example": {
+            "tool": "schedule_task",
+            "params": {
+                "tool": "push_message",
+                "params": "{\"text\": \"主人，5分鐘到了！\"}",
+                "delay_seconds": 300,
+            },
+        },
+    },
+
+    {
+        "name": "list_scheduled",
+        "endpoint": "/list_scheduled",
+        "description": "列出所有排程任務（含等待中、已完成、已取消）",
+        "params": {},
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "tasks": "排程任務清單",
+            },
+        },
+        "example": {
+            "tool": "list_scheduled",
+            "params": {},
+        },
+    },
+
+    {
+        "name": "cancel_scheduled",
+        "endpoint": "/cancel_scheduled",
+        "description": "取消一個等待中的排程任務",
+        "params": {
+            "task_id": {
+                "type": "string",
+                "required": True,
+                "description": "要取消的排程任務 ID",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "取消結果",
+            },
+        },
+        "example": {
+            "tool": "cancel_scheduled",
+            "params": {
+                "task_id": "a1b2c3d4",
+            },
+        },
+    },
 ]
 
 
@@ -341,6 +1242,7 @@ def get_tool(name: str) -> dict | None:
 _TYPE_MAP = {
     "string": str,
     "int":    int,
+    "float": (float, int),  # 允許整數（JSON 1 vs 1.0）
     "bool":  (bool, int),   # JSON 無 bool，允許 0/1
     "list":   list,
 }

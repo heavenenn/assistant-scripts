@@ -1,0 +1,190 @@
+[
+  {
+    "tool": "send_mail",
+    "error": "內嵌圖片不存在：$1.file",
+    "original_params": {
+      "to": "heaven.enn@gmail.com",
+      "subject": "桌面截圖 - 薇薇測試",
+      "content": "<h3>這是定遠目前的桌面截圖</h3><br><img src='cid:img0' style='max-width:100%;'>",
+      "is_html": true,
+      "inline_images": [
+        "$1.file"
+      ]
+    },
+    "fixed_params": {
+      "to": "heaven.enn@gmail.com",
+      "subject": "桌面截圖 - 薇薇測試",
+      "content": "<h3>這是定遠目前的桌面截圖</h3><br><img src='cid:img0' style='max-width:100%;'>",
+      "is_html": true,
+      "inline_images": [
+        "C:\\Users\\heave\\OneDrive\\文件\\薇薇\\Screenshots\\screenshot_20260418_185752.png"
+      ]
+    },
+    "timestamp": "2026-04-18T18:58:11.289741"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-18T19:14:52.960897"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-18T19:14:57.917893"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-18T19:25:37.573378"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-18T19:25:57.671876"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-18T21:57:04.628465"
+  },
+  {
+    "tool": "run_command",
+    "error": "參數 command 型別錯誤：期望 string，實際 list",
+    "original_params": {
+      "command": "Get-Partition -DiskNumber 1 | Select DriveLetter, Size, Type"
+    },
+    "fixed_params": {
+      "command": "powershell -Command \"Get-Partition -DiskNumber 1 | Select DriveLetter, Size, Type\""
+    },
+    "timestamp": "2026-04-18T23:59:54.629754"
+  },
+  {
+    "tool": "run_command",
+    "error": "指令執行失敗（returncode=255）：\n'Get-Partition' ���O�����Υ~���R�O�B�i���檺�{���Χ妸�ɡC\n",
+    "original_params": {
+      "command": " = Get-Partition -DiskNumber 1 -PartitionNumber 1;  | Resize-Partition -Size (.Size + 371GB); Get-Partition -DiskNumber 1 | Select DriveLetter, Size, Type"
+    },
+    "fixed_params": {
+      "command": "powershell -Command \"$p = Get-Partition -DiskNumber 1 -PartitionNumber 1; Resize-Partition -InputObject $p -Size ($p.Size + 371GB); Get-Partition -DiskNumber 1 | Select DriveLetter, Size, Type\""
+    },
+    "timestamp": "2026-04-19T00:00:20.533876"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-19T17:02:19.080121"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-19T18:56:52.371643"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-19T19:22:59.804389"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-19T19:30:28.595268"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-19T20:08:06.193376"
+  },
+  {
+    "tool": "click",
+    "error": "座標超出螢幕",
+    "original_params": {
+      "x": 9999,
+      "y": 0
+    },
+    "fixed_params": {
+      "x": 500,
+      "y": 0
+    },
+    "timestamp": "2026-04-19T20:42:58.589335"
+  }
+]

@@ -13,10 +13,20 @@ assistant_api.py
 from flask import Flask, request, jsonify
 from functools import wraps
 import traceback
+import logging
+from datetime import datetime
 
-from tools import mail, voice, screenshot, system, audio
+from tools import mail, voice, screenshot, system, audio, ui, grok_media, grok_writer, telegram, scheduler
 
 app = Flask(__name__)
+
+# ── 操作 Log（記錄每次工具呼叫，方便追蹤薇薇的實際行為）──
+_LOG_FILE = r"C:\Users\heave\.openclaw\assistant-scripts\api_calls.log"
+_log_handler = logging.FileHandler(_LOG_FILE, encoding="utf-8")
+_log_handler.setFormatter(logging.Formatter("%(asctime)s  %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+_logger = logging.getLogger("api_calls")
+_logger.setLevel(logging.INFO)
+_logger.addHandler(_log_handler)
 
 ALLOWED_USER = "8261240503"
 
@@ -94,7 +104,17 @@ def require_auth(f):
         data = request.json or {}
         if str(data.get("user_id", "")) != ALLOWED_USER:
             return jsonify(fail("Unauthorized：user_id 不符", hint="請確認 user_id 是否正確")), 403
-        return f(*args, **kwargs)
+        # ── Log 每次呼叫的 endpoint + 參數 + 結果 ──
+        endpoint = request.path
+        params = {k: v for k, v in data.items() if k != "user_id"}
+        _logger.info(f">>> {endpoint}  params={params}")
+        result = f(*args, **kwargs)
+        try:
+            resp_data = result.get_json() if hasattr(result, 'get_json') else str(result)
+            _logger.info(f"<<< {endpoint}  result={resp_data}")
+        except Exception:
+            pass
+        return result
     return wrapper
 
 
@@ -201,6 +221,22 @@ def api_screenshot_region():
     return jsonify(result)
 
 
+@app.route("/screen_record", methods=["POST"])
+@require_auth
+def api_screen_record():
+    """
+    螢幕錄影。
+    Body JSON 欄位：user_id, [duration, framerate, filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: screenshot.screen_record(
+        duration  = data.get("duration", 10),
+        framerate = data.get("framerate", 15),
+        filename  = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
 # ── 系統 ─────────────────────────────────────────────────────────
 
 @app.route("/run_command", methods=["POST"])
@@ -208,12 +244,13 @@ def api_screenshot_region():
 def api_run_command():
     """
     執行系統指令。
-    Body JSON 欄位：user_id, command（list 或 string）, [timeout]
+    Body JSON 欄位：user_id, command（list 或 string）, [timeout], [elevated]
     """
     data   = request.json
     result = run_with_retry(lambda: system.run_command(
-        command = data["command"],
-        timeout = data.get("timeout", 30),
+        command  = data["command"],
+        timeout  = data.get("timeout", 30),
+        elevated = data.get("elevated", False),
     ))
     return jsonify(result)
 
@@ -265,6 +302,318 @@ def api_normalize_mp3():
             "請查看 data.failed 清單"
         )
 
+    return jsonify(result)
+
+
+# ── UI 操作 ──────────────────────────────────────────────────────
+
+@app.route("/click", methods=["POST"])
+@require_auth
+def api_click():
+    """滑鼠點擊。Body JSON：user_id, x, y, [button]"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.click(
+        x=data["x"], y=data["y"], button=data.get("button", "left"),
+    ))
+    return jsonify(result)
+
+
+@app.route("/double_click", methods=["POST"])
+@require_auth
+def api_double_click():
+    """滑鼠雙擊。Body JSON：user_id, x, y"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.double_click(x=data["x"], y=data["y"]))
+    return jsonify(result)
+
+
+@app.route("/right_click", methods=["POST"])
+@require_auth
+def api_right_click():
+    """滑鼠右鍵。Body JSON：user_id, x, y"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.right_click(x=data["x"], y=data["y"]))
+    return jsonify(result)
+
+
+@app.route("/type_text", methods=["POST"])
+@require_auth
+def api_type_text():
+    """輸入文字。Body JSON：user_id, text, [interval]"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.type_text(
+        text=data["text"], interval=data.get("interval", 0.05),
+    ))
+    return jsonify(result)
+
+
+@app.route("/hotkey", methods=["POST"])
+@require_auth
+def api_hotkey():
+    """鍵盤快捷鍵。Body JSON：user_id, keys（例如 "ctrl+c"）"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.hotkey(keys=data["keys"]))
+    return jsonify(result)
+
+
+@app.route("/press_key", methods=["POST"])
+@require_auth
+def api_press_key():
+    """按下單一按鍵。Body JSON：user_id, key, [presses]"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.press_key(
+        key=data["key"], presses=data.get("presses", 1),
+    ))
+    return jsonify(result)
+
+
+@app.route("/wait", methods=["POST"])
+@require_auth
+def api_wait():
+    """等待指定秒數。Body JSON：user_id, [seconds]"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.wait(
+        seconds=data.get("seconds", 1.0),
+    ))
+    return jsonify(result)
+
+
+@app.route("/scroll", methods=["POST"])
+@require_auth
+def api_scroll():
+    """滾動滾輪。Body JSON：user_id, clicks, [x, y]"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.scroll(
+        clicks=data["clicks"], x=data.get("x"), y=data.get("y"),
+    ))
+    return jsonify(result)
+
+
+@app.route("/locate_image", methods=["POST"])
+@require_auth
+def api_locate_image():
+    """在螢幕上比對圖片位置。Body JSON：user_id, image_path, [confidence]"""
+    data   = request.json
+    result = run_with_retry(lambda: ui.locate_image(
+        image_path=data["image_path"], confidence=data.get("confidence", 0.8),
+    ))
+    return jsonify(result)
+
+
+@app.route("/get_screen_size", methods=["POST"])
+@require_auth
+def api_get_screen_size():
+    """取得螢幕解析度。Body JSON：user_id"""
+    result = run_with_retry(lambda: ui.get_screen_size())
+    return jsonify(result)
+
+
+# ── AI 圖片 / 影片生成 ───────────────────────────────────────────
+
+@app.route("/generate_image", methods=["POST"])
+@require_auth
+def api_generate_image():
+    """
+    AI 文字生成圖片。
+    Body JSON：user_id, prompt, [n, aspect_ratio, resolution, filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: grok_media.generate_image(
+        prompt       = data["prompt"],
+        n            = data.get("n", 1),
+        aspect_ratio = data.get("aspect_ratio", "auto"),
+        resolution   = data.get("resolution", "1k"),
+        filename     = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
+@app.route("/edit_image", methods=["POST"])
+@require_auth
+def api_edit_image():
+    """
+    AI 編輯圖片。
+    Body JSON：user_id, prompt, image_path, [aspect_ratio, filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: grok_media.edit_image(
+        prompt       = data["prompt"],
+        image_path   = data["image_path"],
+        aspect_ratio = data.get("aspect_ratio"),
+        filename     = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
+@app.route("/generate_video", methods=["POST"])
+@require_auth
+def api_generate_video():
+    """
+    AI 文字/圖片生成影片（非同步，自動等待完成）。
+    Body JSON：user_id, prompt, [duration, aspect_ratio, resolution, image_path, filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: grok_media.generate_video(
+        prompt       = data["prompt"],
+        duration     = data.get("duration", 6),
+        aspect_ratio = data.get("aspect_ratio", "16:9"),
+        resolution   = data.get("resolution", "480p"),
+        image_path   = data.get("image_path"),
+        filename     = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
+@app.route("/edit_video", methods=["POST"])
+@require_auth
+def api_edit_video():
+    """
+    AI 編輯影片。
+    Body JSON：user_id, prompt, video_url, [filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: grok_media.edit_video(
+        prompt    = data["prompt"],
+        video_url = data["video_url"],
+        filename  = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
+@app.route("/extend_video", methods=["POST"])
+@require_auth
+def api_extend_video():
+    """
+    延伸影片。
+    Body JSON：user_id, prompt, video_url, [duration, filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: grok_media.extend_video(
+        prompt    = data["prompt"],
+        video_url = data["video_url"],
+        duration  = data.get("duration", 6),
+        filename  = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
+# ── AI 文字生成 ──────────────────────────────────────────────────
+
+@app.route("/generate_text", methods=["POST"])
+@require_auth
+def api_generate_text():
+    """
+    AI 生成文字內容。
+    Body JSON：user_id, prompt, [system_prompt, filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: grok_writer.generate_text(
+        prompt        = data["prompt"],
+        system_prompt = data.get("system_prompt", "你是一位專業的繁體中文寫作助手。"),
+        filename      = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
+@app.route("/generate_novel", methods=["POST"])
+@require_auth
+def api_generate_novel():
+    """
+    AI 分章節生成長篇小說。
+    Body JSON：user_id, prompt, [chapters, style, filename]
+    """
+    data   = request.json
+    result = run_with_retry(lambda: grok_writer.generate_novel(
+        prompt   = data["prompt"],
+        chapters = data.get("chapters", 5),
+        style    = data.get("style", "繁體中文，文筆細膩，對話生動"),
+        filename = data.get("filename"),
+    ))
+    return jsonify(result)
+
+
+# ── Telegram 推播 ────────────────────────────────────────────────
+
+@app.route("/push_message", methods=["POST"])
+@require_auth
+def api_push_message():
+    """Telegram 推播文字。Body JSON：user_id, text, [parse_mode]"""
+    data   = request.json
+    result = run_with_retry(lambda: telegram.push_message(
+        text=data["text"], parse_mode=data.get("parse_mode", ""),
+    ))
+    return jsonify(result)
+
+
+@app.route("/push_photo", methods=["POST"])
+@require_auth
+def api_push_photo():
+    """Telegram 推播圖片。Body JSON：user_id, photo_path, [caption]"""
+    data   = request.json
+    result = run_with_retry(lambda: telegram.push_photo(
+        photo_path=data["photo_path"], caption=data.get("caption", ""),
+    ))
+    return jsonify(result)
+
+
+@app.route("/push_file", methods=["POST"])
+@require_auth
+def api_push_file():
+    """Telegram 推播檔案。Body JSON：user_id, file_path, [caption]"""
+    data   = request.json
+    result = run_with_retry(lambda: telegram.push_file(
+        file_path=data["file_path"], caption=data.get("caption", ""),
+    ))
+    return jsonify(result)
+
+
+@app.route("/ai_push", methods=["POST"])
+@require_auth
+def api_ai_push():
+    """AI 即時生成訊息並推播。Body JSON：user_id, scenario, [context]"""
+    data   = request.json
+    result = run_with_retry(lambda: telegram.ai_push(
+        scenario=data["scenario"], context=data.get("context", ""),
+    ))
+    return jsonify(result)
+
+
+# ── 排程 ───────────────────────────────────────────────────────
+
+@app.route("/schedule_task", methods=["POST"])
+@require_auth
+def api_schedule_task():
+    """排程延遲或定時執行工具。Body JSON：user_id, tool, [params, delay_seconds, run_at]"""
+    data   = request.json
+    import json
+    params_raw = data.get("params", {})
+    if isinstance(params_raw, str):
+        params_raw = json.loads(params_raw)
+    result = run_with_retry(lambda: scheduler.schedule_task(
+        tool=data["tool"],
+        params=params_raw,
+        delay_seconds=data.get("delay_seconds", 0),
+        run_at=data.get("run_at", ""),
+    ))
+    return jsonify(result)
+
+
+@app.route("/list_scheduled", methods=["POST"])
+@require_auth
+def api_list_scheduled():
+    """列出所有排程任務。Body JSON：user_id"""
+    result = run_with_retry(lambda: scheduler.list_scheduled())
+    return jsonify(result)
+
+
+@app.route("/cancel_scheduled", methods=["POST"])
+@require_auth
+def api_cancel_scheduled():
+    """取消排程任務。Body JSON：user_id, task_id"""
+    data   = request.json
+    result = run_with_retry(lambda: scheduler.cancel_scheduled(
+        task_id=data["task_id"],
+    ))
     return jsonify(result)
 
 
