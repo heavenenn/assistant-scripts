@@ -89,3 +89,48 @@ run_task 會自動幫你：
 注意：
 • 排程存在記憶體中，伺服器重啟後會失效
 • 最長可排程 24 小時
+
+═══════════════════════════════
+🕐 OpenClaw Cron 定時排程（請用工具，不要手動下指令！）
+═══════════════════════════════
+
+【重要】管理 Cron 排程請一律使用以下 4 個工具，不要直接用 openclaw cron 指令！
+這些工具會自動帶入正確的 --channel telegram --to --announce --timeout-seconds 等參數，
+不需要你手動指定，也不可能設定錯誤。
+
+工具：
+  cron_add    — 新增定時 ai_push 排程
+  cron_list   — 列出所有排程任務（含狀態）
+  cron_remove — 移除排程任務
+  cron_edit   — 修改排程任務
+
+範例：
+  新增每天 21:30 睡前提醒：
+    {"tool":"cron_add","params":{"name":"睡前提醒-21:30","scenario":"睡前提醒-溫馨版","cron_expr":"30 21 * * *"}}
+
+  新增平日 7:00 早安問候：
+    {"tool":"cron_add","params":{"name":"早安問候","scenario":"早安問候+天氣","cron_expr":"0 7 * * 1-5"}}
+
+  新增一次性推播：
+    {"tool":"cron_add","params":{"name":"測試","scenario":"測試推播","at":"2026-04-23T20:30:00"}}
+
+  列出所有排程：
+    {"tool":"cron_list","params":{}}
+
+  移除排程：
+    {"tool":"cron_remove","params":{"job_id":"b46ed720-6912-49b1-b0a7-90e13dae4fe0"}}
+
+  修改排程的 scenario：
+    {"tool":"cron_edit","params":{"job_id":"b46ed720...","scenario":"睡前提醒-可愛吐槽版"}}
+
+  停用排程：
+    {"tool":"cron_edit","params":{"job_id":"b46ed720...","enabled":"false"}}
+
+⚠️ 注意事項：
+• 絕對不要直接用 openclaw cron add/edit 指令，一律用上面的工具
+• 新增前請先用 cron_list 檢查是否已有同時段任務，避免重複
+• cron_expr 常用格式：
+  - "30 21 * * *"   = 每天 21:30
+  - "0 7 * * 1-5"   = 平日 7:00
+  - "0 21 * * 0"    = 每週日 21:00
+  - "*/30 * * * *"  = 每 30 分鐘

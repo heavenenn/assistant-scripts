@@ -3,4 +3,4 @@ tools/__pycache__/
 *.pyc
 api_calls.log
 tools/.elevated/
-secrets.py
+app_secrets.py

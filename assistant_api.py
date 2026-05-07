@@ -16,7 +16,7 @@ import traceback
 import logging
 from datetime import datetime
 
-from tools import mail, voice, screenshot, system, audio, ui, grok_media, grok_writer, telegram, scheduler
+from tools import mail, voice, screenshot, system, audio, ui, grok_media, grok_writer, telegram, scheduler, cron
 
 app = Flask(__name__)
 
@@ -613,6 +613,51 @@ def api_cancel_scheduled():
     data   = request.json
     result = run_with_retry(lambda: scheduler.cancel_scheduled(
         task_id=data["task_id"],
+    ))
+    return jsonify(result)
+
+
+# ── OpenClaw Cron 排程管理（防呆版）──────────────────────────────
+
+@app.route("/cron_add", methods=["POST"])
+@require_auth
+def api_cron_add():
+    """新增定時 ai_push 排程。Body JSON：user_id, name, scenario, [cron_expr, at, context]"""
+    data   = request.json
+    result = run_with_retry(lambda: cron.cron_add(
+        name=data["name"], scenario=data["scenario"],
+        cron_expr=data.get("cron_expr", ""), at=data.get("at", ""),
+        context=data.get("context", ""),
+    ))
+    return jsonify(result)
+
+
+@app.route("/cron_list", methods=["POST"])
+@require_auth
+def api_cron_list():
+    """列出所有 cron 排程。Body JSON：user_id"""
+    result = run_with_retry(lambda: cron.cron_list())
+    return jsonify(result)
+
+
+@app.route("/cron_remove", methods=["POST"])
+@require_auth
+def api_cron_remove():
+    """移除 cron 排程。Body JSON：user_id, job_id"""
+    data   = request.json
+    result = run_with_retry(lambda: cron.cron_remove(job_id=data["job_id"]))
+    return jsonify(result)
+
+
+@app.route("/cron_edit", methods=["POST"])
+@require_auth
+def api_cron_edit():
+    """修改 cron 排程。Body JSON：user_id, job_id, [name, scenario, cron_expr, enabled]"""
+    data   = request.json
+    result = run_with_retry(lambda: cron.cron_edit(
+        job_id=data["job_id"], name=data.get("name", ""),
+        scenario=data.get("scenario", ""), cron_expr=data.get("cron_expr", ""),
+        enabled=data.get("enabled", ""),
     ))
     return jsonify(result)
 

@@ -32,13 +32,13 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
 
 from tool_registry import TOOLS_SCHEMA, TOOLS_MAP, validate_params
 from memory import memory
-from secrets import XAI_API_KEY, USER_ID
+from app_secrets import XAI_API_KEY, USER_ID
 
 API_BASE = "http://127.0.0.1:5005"
 
 # ── xAI API 設定（規劃、除錯、視覺分析共用同一組 Key）──
 XAI_API_BASE = "https://api.x.ai/v1"
-XAI_MODEL    = "grok-4.20-beta-latest-reasoning"
+XAI_MODEL    = "grok-4-1-fast"
 
 
 # ═══════════════════════════════════════

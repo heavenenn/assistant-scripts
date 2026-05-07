@@ -1226,6 +1226,161 @@ TOOLS_SCHEMA = [
             },
         },
     },
+
+    # ── OpenClaw Cron 排程管理（防呆版）─────────────────────────
+
+    {
+        "name": "cron_add",
+        "endpoint": "/cron_add",
+        "description": "新增定時 ai_push 排程（自動帶正確 Telegram delivery 設定，不需手動指定 channel/to）",
+        "params": {
+            "name": {
+                "type": "string",
+                "required": True,
+                "description": "任務名稱（如「睡前提醒-21:30」「早安問候」）",
+            },
+            "scenario": {
+                "type": "string",
+                "required": True,
+                "description": "ai_push 的 scenario 參數（如「睡前提醒-溫馨版」「早安問候」）",
+            },
+            "cron_expr": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "Cron 表達式，週期性任務（如「30 21 * * *」= 每天 21:30，「0 7 * * 1-5」= 平日 7:00），與 at 擇一",
+            },
+            "at": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "一次性任務時間（ISO 格式如「2026-04-23T20:30:00」），與 cron_expr 擇一",
+            },
+            "context": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "ai_push 的額外背景資訊（如「主人今天加班」），選填",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message":  "結果訊息",
+                "job_id":   "排程任務 ID",
+                "name":     "任務名稱",
+                "schedule": "排程時間",
+            },
+        },
+        "example": {
+            "tool": "cron_add",
+            "params": {
+                "name": "睡前提醒-21:30",
+                "scenario": "睡前提醒-溫馨版",
+                "cron_expr": "30 21 * * *",
+            },
+        },
+    },
+
+    {
+        "name": "cron_list",
+        "endpoint": "/cron_list",
+        "description": "列出所有 OpenClaw Cron 排程任務（含狀態、delivery 設定）",
+        "params": {},
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "結果訊息",
+                "total":   "任務總數",
+                "jobs":    "任務列表",
+            },
+        },
+        "example": {
+            "tool": "cron_list",
+            "params": {},
+        },
+    },
+
+    {
+        "name": "cron_remove",
+        "endpoint": "/cron_remove",
+        "description": "移除指定的 OpenClaw Cron 排程任務",
+        "params": {
+            "job_id": {
+                "type": "string",
+                "required": True,
+                "description": "要移除的任務 ID（可用 cron_list 查詢）",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "結果訊息",
+            },
+        },
+        "example": {
+            "tool": "cron_remove",
+            "params": {
+                "job_id": "b46ed720-6912-49b1-b0a7-90e13dae4fe0",
+            },
+        },
+    },
+
+    {
+        "name": "cron_edit",
+        "endpoint": "/cron_edit",
+        "description": "修改現有 Cron 排程（自動帶正確 delivery 設定）",
+        "params": {
+            "job_id": {
+                "type": "string",
+                "required": True,
+                "description": "要修改的任務 ID",
+            },
+            "name": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "新名稱（選填）",
+            },
+            "scenario": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "新的 ai_push scenario（選填）",
+            },
+            "cron_expr": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "新的 Cron 表達式（選填）",
+            },
+            "enabled": {
+                "type": "string",
+                "required": False,
+                "default": "",
+                "description": "啟用或停用（\"true\" / \"false\"）（選填）",
+            },
+        },
+        "response": {
+            "success_key": "status",
+            "success_val": "success",
+            "data_keys": {
+                "message": "結果訊息",
+                "job_id":  "任務 ID",
+                "name":    "任務名稱",
+            },
+        },
+        "example": {
+            "tool": "cron_edit",
+            "params": {
+                "job_id": "b46ed720-6912-49b1-b0a7-90e13dae4fe0",
+                "scenario": "睡前提醒-可愛吐槽版",
+            },
+        },
+    },
 ]
 
 

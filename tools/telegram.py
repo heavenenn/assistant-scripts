@@ -8,7 +8,7 @@ import sys
 import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from secrets import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, XAI_API_KEY
+from app_secrets import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, XAI_API_KEY
 
 BOT_TOKEN = TELEGRAM_BOT_TOKEN
 CHAT_ID   = TELEGRAM_CHAT_ID
@@ -17,7 +17,7 @@ API_BASE  = f"https://api.telegram.org/bot{BOT_TOKEN}"
 # xAI（Grok）設定（ai_push 用）
 _XAI_KEY  = XAI_API_KEY
 _XAI_BASE = "https://api.x.ai/v1"
-_XAI_MODEL = "grok-4-0709"
+_XAI_MODEL = "grok-4-1-fast"
 
 
 def push_message(text: str, parse_mode: str = "") -> dict:

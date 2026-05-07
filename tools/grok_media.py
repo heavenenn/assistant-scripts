@@ -16,7 +16,7 @@ from datetime import datetime
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from secrets import XAI_API_KEY
+from app_secrets import XAI_API_KEY
 
 # ── 設定 ─────────────────────────────────────────────────────────
 
